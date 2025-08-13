@@ -245,14 +245,6 @@ firebase deploy
 - **AI/ML**: 생성형 AI 모델 개발팀
 - **UX/UI**: 접근성 중심 디자인팀
 
-## 📞 문의
-
-프로젝트에 대한 문의사항이 있으시면 언제든 연락주세요:
-
-- 📧 Email: contact@readable-platform.com
-- 🐛 Issues: [GitHub Issues](https://github.com/your-username/readable-backend/issues)
-- 📖 Documentation: [Wiki](https://github.com/your-username/readable-backend/wiki)
-
 ---
 
 <div align="center">
