@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI
 from pydantic import BaseModel
-from routers import users, quiz
+from routers import users, quiz, vocab_library
 from firebase_config import firebase_service
 
 # Load environment variables
@@ -21,6 +21,7 @@ async def startup_event():
 
 app.include_router(users.router, prefix="/api/v1", tags=["users"])
 app.include_router(quiz.router, prefix="/api/v1", tags=["quiz"])
+app.include_router(vocab_library.router, prefix="/api/v1", tags=["vocabulary"])
 
 class Item(BaseModel):
     name: str
