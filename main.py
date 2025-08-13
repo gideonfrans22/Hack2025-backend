@@ -20,7 +20,7 @@ async def startup_event():
     firebase_service.initialize_firebase(service_account_path)
 
 app.include_router(users.router, prefix="/api/v1", tags=["users"])
-app.include_router(quiz.router, prefix="/api/v1", tags=["quiz"])
+app.include_router(quiz.router, prefix="/api/v1/quiz", tags=["quiz"])
 app.include_router(vocab_library.router, prefix="/api/v1", tags=["vocabulary"])
 
 class Item(BaseModel):
