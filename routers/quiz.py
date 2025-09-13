@@ -4,7 +4,6 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 import sys
 import os
-import openai
 from dotenv import load_dotenv
 import json
 
@@ -19,13 +18,24 @@ from routers.users import get_current_user, User
 router = APIRouter()
 
 # Configure OpenAI
-openai_api_key = os.getenv("OPENAI_API_KEY")
-if openai_api_key:
-    openai.api_key = openai_api_key
-    client = openai.OpenAI(api_key=openai_api_key)
-else:
-    client = None
-    print("Warning: OPENAI_API_KEY not set. Quiz generation will use fallback mode.")
+from openai import OpenAI
+
+def get_openai_client():
+    """Get OpenAI client with proper error handling"""
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        return None
+    
+    try:
+        # For OpenAI v1.x, create client instance
+        client = OpenAI(api_key=openai_api_key)
+        return client
+    except Exception as e:
+        print(f"Warning: Failed to initialize OpenAI client: {e}")
+        return None
+
+# Initialize client as None, will be set when needed
+client = None
 
 class QuizDifficulty(str):
     BEGINNER = "beginner"
@@ -155,42 +165,35 @@ async def generate_quiz_with_ai(vocabulary: List[Dict], quiz_request: QuizReques
 """
 
     try:
-        if not client:
+        # Get OpenAI client
+        openai_client = get_openai_client()
+        if not openai_client:
             raise Exception("OpenAI client not configured")
             
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",  # Use newer, more capable model
             messages=[
                 {
                     "role": "system", 
-                    "content": "당신은 한국어 점자 교육 전문가입니다. 사용자의 학습 수준에 맞는 개인화된 점자 퀴즈를 생성합니다."
+                    "content": "당신은 한국어 점자 교육 전문가입니다. 사용자의 학습 수준에 맞는 개인화된 점자 퀴즈를 생성합니다. 반드시 JSON 형식으로 응답하세요."
                 },
                 {"role": "user", "content": prompt}
             ],
             max_tokens=2000,
-            temperature=0.7
+            temperature=0.7,
+            response_format={"type": "json_object"}  # Ensure JSON response
         )
         
         # Parse AI response
         ai_content = response.choices[0].message.content
         
-        # Try to extract JSON from the response
+        # Parse JSON from the response
         try:
-            # Find JSON content between ```json and ```
-            if "```json" in ai_content:
-                json_start = ai_content.find("```json") + 7
-                json_end = ai_content.find("```", json_start)
-                json_content = ai_content[json_start:json_end].strip()
-            else:
-                # Try to find JSON-like content
-                json_start = ai_content.find("{")
-                json_end = ai_content.rfind("}") + 1
-                json_content = ai_content[json_start:json_end]
-            
-            quiz_data = json.loads(json_content)
-            
-        except json.JSONDecodeError:
-            # Fallback if JSON parsing fails
+            quiz_data = json.loads(ai_content)
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"AI response: {ai_content}")
+            # Fallback quiz data
             quiz_data = {
                 "title": f"{quiz_request.difficulty_level.title()} 점자 학습 퀴즈",
                 "questions": [
@@ -249,6 +252,29 @@ async def generate_quiz_with_ai(vocabulary: List[Dict], quiz_request: QuizReques
             created_at=datetime.utcnow(),
             based_on_vocabulary=[]
         )
+
+@router.get("/test-openai", tags=["quiz"])
+async def test_openai_connection():
+    """Test OpenAI connection"""
+    try:
+        openai_client = get_openai_client()
+        if not openai_client:
+            return {"status": "error", "message": "OpenAI client not configured. Please set OPENAI_API_KEY."}
+        
+        # Test with a simple request
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": "Say 'Hello' in Korean"}],
+            max_tokens=10
+        )
+        
+        return {
+            "status": "success", 
+            "message": "OpenAI connection working",
+            "test_response": response.choices[0].message.content
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"OpenAI connection failed: {str(e)}"}
 
 @router.post("/generate", tags=["quiz"], response_model=QuizResponse)
 async def generate_quiz(
