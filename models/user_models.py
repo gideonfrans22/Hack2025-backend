@@ -88,7 +88,7 @@ class OAuthLoginResponse(BaseModel):
 
 class UserProfile(BaseModel):
     """User profile response model"""
-    id: int
+    id: str  # Firestore document ID is a string
     email: str
     nickname: Optional[str] = None
     name: Optional[str] = None
