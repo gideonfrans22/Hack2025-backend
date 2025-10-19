@@ -143,6 +143,7 @@ class UserController:
             # Add default values for OAuth fields (for regular signup)
             user_dict['nickname'] = user_dict.get('nickname') or user_dict.get('name')
             user_dict['profile_image'] = user_dict.get('profile_image')
+            user_dict['interests'] = user_dict.get('interests') or []  # Default to empty list
             user_dict['oauth_provider'] = None
             user_dict['oauth_id'] = None
             user_dict['created_at'] = datetime.utcnow()
@@ -356,6 +357,7 @@ class UserController:
                         'oauth_id': kakao_data.kakao_id,
                         'age': 0,  # Default, should be updated later
                         'gender': '',  # Default, should be updated later
+                        'interests': [],  # Default empty interests list
                         'created_at': datetime.utcnow(),
                         'updated_at': datetime.utcnow()
                     }
@@ -454,6 +456,7 @@ class UserController:
                         'oauth_id': naver_data.naver_id,
                         'age': 0,  # Default, should be updated later
                         'gender': '',  # Default, should be updated later
+                        'interests': [],  # Default empty interests list
                         'created_at': datetime.utcnow(),
                         'updated_at': datetime.utcnow()
                     }
@@ -547,7 +550,8 @@ class UserController:
                 nickname=updated_data.get('nickname'),
                 name=updated_data.get('name'),
                 profile_image=updated_data.get('profile_image'),
-                oauth_provider=updated_data.get('oauth_provider')
+                oauth_provider=updated_data.get('oauth_provider'),
+                interests=updated_data.get('interests', [])  # Return interests list
             )
             
         except HTTPException:

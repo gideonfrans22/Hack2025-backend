@@ -2,7 +2,7 @@
 User data models for authentication and user management
 """
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -15,6 +15,7 @@ class User(BaseModel):
     hobby: Optional[str] = None
     nickname: Optional[str] = None
     profile_image: Optional[str] = None
+    interests: Optional[List[str]] = None  # List of user interests
 
 
 class UserInDB(User):
@@ -34,6 +35,7 @@ class UserSignup(BaseModel):
     email: EmailStr
     password: str
     hobby: Optional[str] = None
+    interests: Optional[List[str]] = None  # List of user interests
 
 
 class UserLogin(BaseModel):
@@ -68,6 +70,7 @@ class UserProfileUpdate(BaseModel):
     hobby: Optional[str] = None
     nickname: Optional[str] = None
     profile_image: Optional[str] = None
+    interests: Optional[List[str]] = None  # List of user interests
 
 
 class Token(BaseModel):
@@ -91,3 +94,4 @@ class UserProfile(BaseModel):
     name: Optional[str] = None
     profile_image: Optional[str] = None
     oauth_provider: Optional[str] = None
+    interests: Optional[List[str]] = None  # List of user interests
