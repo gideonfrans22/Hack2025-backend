@@ -1,8 +1,8 @@
 """
 Vocabulary library data models
 """
-from pydantic import BaseModel
-from typing import Optional, Dict
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, List
 from datetime import datetime
 from enum import Enum
 
@@ -25,7 +25,12 @@ class VocabularyItem(BaseModel):
     content: str  # The character or word
     vocab_type: VocabType
     difficulty_level: DifficultyLevel
-    braille_representation: Optional[str] = None
+    braille_representation: Optional[List[List[int]]] = Field(
+        default=None,
+        description="Electronic braille notation: list of cells, each cell is a list of active dots (1-6). "
+                    "Dot numbering: 1=top-left, 2=middle-left, 3=bottom-left, 4=top-right, 5=middle-right, 6=bottom-right. "
+                    "Example: [[4]] for 'ㄱ', [[1,2,4,5], [2,4]] for '가다'"
+    )
     learned_at: Optional[datetime] = None
 
 
@@ -34,7 +39,11 @@ class VocabularyCreate(BaseModel):
     content: str
     vocab_type: VocabType
     difficulty_level: DifficultyLevel
-    braille_representation: Optional[str] = None
+    braille_representation: Optional[List[List[int]]] = Field(
+        default=None,
+        description="Electronic braille notation: list of cells, each cell is a list of active dots (1-6). "
+                    "Example: [[4]] for 'ㄱ', [[1,2,4,5], [2,4]] for '가다'"
+    )
 
 
 class VocabularyResponse(VocabularyItem):

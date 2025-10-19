@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Import new structured routers
-from routers import users_new, quiz_new, vocab_library_new
+from routers import users_new, quiz_new, vocab_library_new, braille_library
 from firebase_config import firebase_service
 
 # Load environment variables
@@ -39,6 +39,7 @@ async def startup_event():
 app.include_router(users_new.router, prefix="/api/v1", tags=["users"])
 app.include_router(quiz_new.router, prefix="/api/v1/quiz", tags=["quiz"])
 app.include_router(vocab_library_new.router, prefix="/api/v1", tags=["vocabulary"])
+app.include_router(braille_library.router, tags=["braille_library"])
 
 class Item(BaseModel):
     name: str
