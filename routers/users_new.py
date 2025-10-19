@@ -5,7 +5,11 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List
 
-from models.user_models import User, UserSignup, UserLogin, Token
+from models.user_models import (
+    User, UserSignup, UserLogin, Token,
+    KakaoLogin, NaverLogin, UserProfileUpdate,
+    OAuthLoginResponse, UserProfile
+)
 from controllers.user_controller import UserController
 
 router = APIRouter()
@@ -114,3 +118,68 @@ async def read_user_by_email(
         User information (without password)
     """
     return UserController.get_user_by_email_detailed(email)
+
+
+@router.post("/auth/kakao/login", response_model=OAuthLoginResponse)
+async def kakao_login(kakao_data: KakaoLogin):
+    """
+    Kakao OAuth login endpoint
+    
+    Authenticates user with Kakao OAuth token and creates/updates user account.
+    Returns JWT token for backend authentication.
+    
+    Args:
+        kakao_data: Kakao OAuth login data including access_token, kakao_id, email, nickname, profile_image
+        
+    Returns:
+        OAuth login response with:
+        - success: True if login successful
+        - data:
+            - token: Backend JWT token
+            - user: User profile (id, email, nickname)
+            - is_new_user: True if this is a new account
+    """
+    return UserController.kakao_login(kakao_data)
+
+
+@router.post("/auth/naver/login", response_model=OAuthLoginResponse)
+async def naver_login(naver_data: NaverLogin):
+    """
+    Naver OAuth login endpoint
+    
+    Authenticates user with Naver OAuth token and creates/updates user account.
+    Returns JWT token for backend authentication.
+    
+    Args:
+        naver_data: Naver OAuth login data including access_token, naver_id, email, nickname, profile_image
+        
+    Returns:
+        OAuth login response with:
+        - success: True if login successful
+        - data:
+            - token: Backend JWT token
+            - user: User profile (id, email, nickname)
+            - is_new_user: True if this is a new account
+    """
+    return UserController.naver_login(naver_data)
+
+
+@router.put("/user/profile", response_model=UserProfile)
+async def update_user_profile(
+    profile_data: UserProfileUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update user profile (protected endpoint)
+    
+    Updates user profile information for the currently authenticated user.
+    Only provided fields will be updated (partial update supported).
+    
+    Args:
+        profile_data: Profile update data (all fields optional)
+        current_user: Current authenticated user from JWT token
+        
+    Returns:
+        Updated user profile
+    """
+    return UserController.update_profile(current_user.email, profile_data)

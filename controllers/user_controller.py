@@ -10,7 +10,11 @@ from fastapi import HTTPException, status
 from dotenv import load_dotenv
 
 from firebase_config import firebase_service
-from models.user_models import User, UserSignup, UserLogin, Token
+from models.user_models import (
+    User, UserSignup, UserLogin, Token, 
+    KakaoLogin, NaverLogin, UserProfileUpdate,
+    OAuthLoginResponse, UserProfile
+)
 
 # Load environment variables
 load_dotenv()
@@ -136,10 +140,19 @@ class UserController:
             user_dict['hashed_password'] = hashed_pw
             del user_dict['password']
             
+            # Add default values for OAuth fields (for regular signup)
+            user_dict['nickname'] = user_dict.get('nickname') or user_dict.get('name')
+            user_dict['profile_image'] = user_dict.get('profile_image')
+            user_dict['oauth_provider'] = None
+            user_dict['oauth_id'] = None
+            user_dict['created_at'] = datetime.utcnow()
+            user_dict['updated_at'] = datetime.utcnow()
+            
             # Store user in Firestore
             users_ref.add(user_dict)
             
-            return User(**{k: user_dict[k] for k in User.model_fields.keys()})
+            # Return User object with only the fields it expects
+            return User(**{k: user_dict[k] for k in User.model_fields.keys() if k in user_dict})
             
         except HTTPException:
             raise
@@ -287,4 +300,260 @@ class UserController:
             raise HTTPException(
                 status_code=500, 
                 detail=f"Error fetching user: {str(e)}"
+            )
+    
+    @staticmethod
+    def kakao_login(kakao_data: KakaoLogin) -> OAuthLoginResponse:
+        """
+        Authenticate user with Kakao OAuth
+        
+        Args:
+            kakao_data: Kakao login data
+            
+        Returns:
+            OAuth login response with token and user info
+            
+        Raises:
+            HTTPException: If authentication fails
+        """
+        try:
+            db = firebase_service.db
+            users_ref = db.collection('users')
+            
+            # Check if user exists by kakao_id or email
+            existing_docs = users_ref.where('oauth_id', '==', kakao_data.kakao_id).where('oauth_provider', '==', 'kakao').get()
+            
+            is_new_user = False
+            
+            if not existing_docs:
+                # Check by email
+                email_docs = users_ref.where('email', '==', kakao_data.email).get()
+                
+                if email_docs:
+                    # User exists with same email but different OAuth provider
+                    # Update existing user with Kakao info
+                    doc = email_docs[0]
+                    user_data = doc.to_dict()
+                    user_id = doc.id
+                    
+                    # Update with Kakao OAuth info
+                    users_ref.document(user_id).update({
+                        'oauth_provider': 'kakao',
+                        'oauth_id': kakao_data.kakao_id,
+                        'nickname': kakao_data.nickname,
+                        'profile_image': kakao_data.profile_image,
+                        'updated_at': datetime.utcnow()
+                    })
+                else:
+                    # Create new user
+                    is_new_user = True
+                    user_dict = {
+                        'email': kakao_data.email,
+                        'nickname': kakao_data.nickname,
+                        'name': kakao_data.nickname,  # Use nickname as name initially
+                        'profile_image': kakao_data.profile_image,
+                        'oauth_provider': 'kakao',
+                        'oauth_id': kakao_data.kakao_id,
+                        'age': 0,  # Default, should be updated later
+                        'gender': '',  # Default, should be updated later
+                        'created_at': datetime.utcnow(),
+                        'updated_at': datetime.utcnow()
+                    }
+                    doc_ref = users_ref.add(user_dict)
+                    user_id = doc_ref[1].id
+                    user_data = user_dict
+            else:
+                # User exists, update last login
+                doc = existing_docs[0]
+                user_data = doc.to_dict()
+                user_id = doc.id
+                
+                users_ref.document(user_id).update({
+                    'updated_at': datetime.utcnow(),
+                    'nickname': kakao_data.nickname,
+                    'profile_image': kakao_data.profile_image
+                })
+            
+            # Create JWT token
+            access_token = UserController.create_access_token(
+                data={"sub": user_data["email"], "user_id": user_id}
+            )
+            
+            # Return response
+            return OAuthLoginResponse(
+                success=True,
+                data={
+                    "token": access_token,
+                    "user": {
+                        "id": user_id,
+                        "email": user_data.get("email"),
+                        "nickname": user_data.get("nickname"),
+                        "profile_image": user_data.get("profile_image")
+                    },
+                    "is_new_user": is_new_user
+                }
+            )
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error during Kakao login: {str(e)}"
+            )
+    
+    @staticmethod
+    def naver_login(naver_data: NaverLogin) -> OAuthLoginResponse:
+        """
+        Authenticate user with Naver OAuth
+        
+        Args:
+            naver_data: Naver login data
+            
+        Returns:
+            OAuth login response with token and user info
+            
+        Raises:
+            HTTPException: If authentication fails
+        """
+        try:
+            db = firebase_service.db
+            users_ref = db.collection('users')
+            
+            # Check if user exists by naver_id or email
+            existing_docs = users_ref.where('oauth_id', '==', naver_data.naver_id).where('oauth_provider', '==', 'naver').get()
+            
+            is_new_user = False
+            
+            if not existing_docs:
+                # Check by email
+                email_docs = users_ref.where('email', '==', naver_data.email).get()
+                
+                if email_docs:
+                    # User exists with same email but different OAuth provider
+                    # Update existing user with Naver info
+                    doc = email_docs[0]
+                    user_data = doc.to_dict()
+                    user_id = doc.id
+                    
+                    # Update with Naver OAuth info
+                    users_ref.document(user_id).update({
+                        'oauth_provider': 'naver',
+                        'oauth_id': naver_data.naver_id,
+                        'nickname': naver_data.nickname,
+                        'profile_image': naver_data.profile_image,
+                        'updated_at': datetime.utcnow()
+                    })
+                else:
+                    # Create new user
+                    is_new_user = True
+                    user_dict = {
+                        'email': naver_data.email,
+                        'nickname': naver_data.nickname,
+                        'name': naver_data.nickname,  # Use nickname as name initially
+                        'profile_image': naver_data.profile_image,
+                        'oauth_provider': 'naver',
+                        'oauth_id': naver_data.naver_id,
+                        'age': 0,  # Default, should be updated later
+                        'gender': '',  # Default, should be updated later
+                        'created_at': datetime.utcnow(),
+                        'updated_at': datetime.utcnow()
+                    }
+                    doc_ref = users_ref.add(user_dict)
+                    user_id = doc_ref[1].id
+                    user_data = user_dict
+            else:
+                # User exists, update last login
+                doc = existing_docs[0]
+                user_data = doc.to_dict()
+                user_id = doc.id
+                
+                users_ref.document(user_id).update({
+                    'updated_at': datetime.utcnow(),
+                    'nickname': naver_data.nickname,
+                    'profile_image': naver_data.profile_image
+                })
+            
+            # Create JWT token
+            access_token = UserController.create_access_token(
+                data={"sub": user_data["email"], "user_id": user_id}
+            )
+            
+            # Return response
+            return OAuthLoginResponse(
+                success=True,
+                data={
+                    "token": access_token,
+                    "user": {
+                        "id": user_id,
+                        "email": user_data.get("email"),
+                        "nickname": user_data.get("nickname"),
+                        "profile_image": user_data.get("profile_image")
+                    },
+                    "is_new_user": is_new_user
+                }
+            )
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error during Naver login: {str(e)}"
+            )
+    
+    @staticmethod
+    def update_profile(email: str, profile_data: UserProfileUpdate) -> UserProfile:
+        """
+        Update user profile
+        
+        Args:
+            email: User email from JWT token
+            profile_data: Profile update data
+            
+        Returns:
+            Updated user profile
+            
+        Raises:
+            HTTPException: If update fails
+        """
+        try:
+            db = firebase_service.db
+            users_ref = db.collection('users')
+            
+            # Find user by email
+            docs = users_ref.where('email', '==', email).get()
+            
+            if not docs:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            doc = docs[0]
+            user_id = doc.id
+            user_data = doc.to_dict()
+            
+            # Prepare update data (only non-None fields)
+            update_data = {
+                k: v for k, v in profile_data.dict().items() 
+                if v is not None
+            }
+            update_data['updated_at'] = datetime.utcnow()
+            
+            # Update user in Firestore
+            users_ref.document(user_id).update(update_data)
+            
+            # Get updated user data
+            updated_doc = users_ref.document(user_id).get()
+            updated_data = updated_doc.to_dict()
+            
+            return UserProfile(
+                id=user_id,
+                email=updated_data.get('email'),
+                nickname=updated_data.get('nickname'),
+                name=updated_data.get('name'),
+                profile_image=updated_data.get('profile_image'),
+                oauth_provider=updated_data.get('oauth_provider')
+            )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error updating profile: {str(e)}"
             )
