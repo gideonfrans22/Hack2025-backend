@@ -39,7 +39,7 @@ async def get_current_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail="사용자를 찾을 수 없습니다",
             headers={"WWW-Authenticate": "Bearer"},
         )
     

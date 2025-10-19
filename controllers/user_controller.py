@@ -65,7 +65,7 @@ class UserController:
         """
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+            detail="인증 정보를 확인할 수 없습니다",
             headers={"WWW-Authenticate": "Bearer"},
         )
         
@@ -127,7 +127,7 @@ class UserController:
             if existing:
                 raise HTTPException(
                     status_code=400, 
-                    detail="User with this email already exists"
+                    detail="이미 존재하는 이메일입니다"
                 )
             
             # Hash password
@@ -159,7 +159,7 @@ class UserController:
         except Exception as e:
             raise HTTPException(
                 status_code=500, 
-                detail=f"Error during signup: {str(e)}"
+                detail=f"회원가입 중 오류가 발생했습니다: {str(e)}"
             )
     
     @staticmethod
@@ -184,7 +184,7 @@ class UserController:
             if not docs:
                 raise HTTPException(
                     status_code=401, 
-                    detail="Invalid email or password"
+                    detail="이메일 또는 비밀번호가 올바르지 않습니다"
                 )
             
             user_data = docs[0].to_dict()
@@ -196,7 +196,7 @@ class UserController:
             ):
                 raise HTTPException(
                     status_code=401, 
-                    detail="Invalid email or password"
+                    detail="이메일 또는 비밀번호가 올바르지 않습니다"
                 )
             
             # Create JWT token
@@ -222,7 +222,7 @@ class UserController:
         except Exception as e:
             raise HTTPException(
                 status_code=500, 
-                detail=f"Error during login: {str(e)}"
+                detail=f"로그인 중 오류가 발생했습니다: {str(e)}"
             )
     
     @staticmethod
@@ -256,7 +256,7 @@ class UserController:
         except Exception as e:
             raise HTTPException(
                 status_code=500, 
-                detail=f"Error fetching users: {str(e)}"
+                detail=f"사용자 목록 조회 중 오류가 발생했습니다: {str(e)}"
             )
     
     @staticmethod
@@ -282,7 +282,7 @@ class UserController:
             docs = list(query.stream())
             
             if not docs:
-                raise HTTPException(status_code=404, detail="User not found")
+                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
             
             user_data = docs[0].to_dict()
             if 'hashed_password' in user_data:
@@ -299,7 +299,7 @@ class UserController:
         except Exception as e:
             raise HTTPException(
                 status_code=500, 
-                detail=f"Error fetching user: {str(e)}"
+                detail=f"사용자 조회 중 오류가 발생했습니다: {str(e)}"
             )
     
     @staticmethod
@@ -397,7 +397,7 @@ class UserController:
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Error during Kakao login: {str(e)}"
+                detail=f"카카오 로그인 중 오류가 발생했습니다: {str(e)}"
             )
     
     @staticmethod
@@ -495,7 +495,7 @@ class UserController:
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Error during Naver login: {str(e)}"
+                detail=f"네이버 로그인 중 오류가 발생했습니다: {str(e)}"
             )
     
     @staticmethod
@@ -521,7 +521,7 @@ class UserController:
             docs = users_ref.where('email', '==', email).get()
             
             if not docs:
-                raise HTTPException(status_code=404, detail="User not found")
+                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
             
             doc = docs[0]
             user_id = doc.id
@@ -555,5 +555,5 @@ class UserController:
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Error updating profile: {str(e)}"
+                detail=f"프로필 업데이트 중 오류가 발생했습니다: {str(e)}"
             )
