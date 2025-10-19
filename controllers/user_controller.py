@@ -105,15 +105,15 @@ class UserController:
             return None
     
     @staticmethod
-    def signup(user: UserSignup) -> User:
+    def signup(user: UserSignup) -> Token:
         """
-        Create a new user account
+        Create a new user account and return JWT token
         
         Args:
             user: User signup data
             
         Returns:
-            Created user object
+            Token with JWT and user information
             
         Raises:
             HTTPException: If user already exists or creation fails
@@ -152,8 +152,20 @@ class UserController:
             # Store user in Firestore
             users_ref.add(user_dict)
             
-            # Return User object with only the fields it expects
-            return User(**{k: user_dict[k] for k in User.model_fields.keys() if k in user_dict})
+            # Create JWT token
+            access_token = UserController.create_access_token(
+                data={"sub": user_dict["email"]}
+            )
+            
+            # Create User object for response
+            user_info = User(**{k: user_dict[k] for k in User.model_fields.keys() if k in user_dict})
+            
+            # Return Token with JWT and user info
+            return Token(
+                access_token=access_token,
+                token_type="bearer",
+                user=user_info
+            )
             
         except HTTPException:
             raise

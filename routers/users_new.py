@@ -46,16 +46,16 @@ async def get_current_user(
     return user
 
 
-@router.post("/signup", response_model=User)
+@router.post("/signup", response_model=Token)
 async def signup(user: UserSignup):
     """
-    User signup endpoint with password encryption and Firestore storage
+    User signup endpoint with password encryption, Firestore storage, and JWT token generation
     
     Args:
         user: User signup data
         
     Returns:
-        Created user object (without password)
+        JWT token and user information (without password)
     """
     return UserController.signup(user)
 
